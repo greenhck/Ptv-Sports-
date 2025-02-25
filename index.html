@@ -3,35 +3,241 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JW Player M3U8 Player</title>
-    <script src="https://cdn.jwplayer.com/libraries/your-jwplayer-library-key.js"></script>
+    <title>PlayMax</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Header */
+        #header {
+            background-color: #181818;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 20px;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.2);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        #logo {
+            width: 120px;
+            height: auto;
+        }
+
+        #search-bar {
+            flex-grow: 1;
+            margin-left: 15px;
+        }
+
+        #search-bar input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 20px;
+            border: none;
+            outline: none;
+        }
+
+        /* Content Slider */
+        .slider-container {
+            display: flex;
+            width: 400%;
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .page {
+            width: 100vw;
+            min-height: 100vh;
+            padding-top: 60px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        /* Thumbnails */
+        .content-container {
+            padding: 10px;
+        }
+
+        .thumbnail-box {
+            width: 100%;
+            max-width: 800px;
+            margin: auto;
+            padding-bottom: 10px;
+        }
+
+        .thumbnail {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .meta-info {
+            font-size: 14px;
+            color: gray;
+        }
+
+        .separator {
+            width: 100%;
+            height: 2px;
+            background-color: brown;
+            margin: 10px 0;
+        }
+
+        /* Footer */
+        #footer {
+            background-color: black;
+            color: white;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 -4px 10px rgba(255, 255, 255, 0.2);
+        }
+
+        .footer-icon {
+            text-align: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .footer-icon img {
+            width: 24px;
+            height: 24px;
+            filter: invert(100%);
+        }
+
+        .active {
+            color: #ffcc00;
+        }
+
+        .highlight-icon img {
+            filter: invert(100%) brightness(200%);
+        }
+    </style>
 </head>
-<body style="background: black; color: white; text-align: center;">
+<body>
 
-    <div id="player"></div>
+<!-- Header -->
+<div id="header">
+    <img id="logo" src="https://via.placeholder.com/120x50" alt="Logo">
+    <div id="search-bar">
+        <input type="text" placeholder="Search...">
+    </div>
+</div>
 
-    <script>
-        // URL से वीडियो लिंक प्राप्त करें
-        function getParameterByName(name) {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(name);
-        }
+<!-- Slider Container -->
+<div class="slider-container" id="slider">
+    <!-- Home Page -->
+    <div class="page" id="home">
+        <div class="content-container">
+            <div class="thumbnail-box">
+                <img class="thumbnail" src="https://via.placeholder.com/800x450" alt="Home Content 1">
+                <div class="title">Home Title 1</div>
+                <div class="meta-info">16K views • 12 hours ago</div>
+                <div class="separator"></div>
+            </div>
+        </div>
+    </div>
 
-        // वीडियो URL प्राप्त करें
-        const videoUrl = getParameterByName('url');
+    <!-- Movies Page -->
+    <div class="page" id="movies">
+        <div class="content-container" id="movies-content"></div>
+    </div>
 
-        if (videoUrl) {
-            jwplayer("player").setup({
-                file: videoUrl,
-                type: "hls",  // M3U8 सपोर्ट के लिए
-                width: "100%",
-                aspectratio: "16:9",
-                autostart: false
+    <!-- Highlights Page -->
+    <div class="page" id="highlights">
+        <div class="content-container" id="highlights-content"></div>
+    </div>
+
+    <!-- Sports Page -->
+    <div class="page" id="sports">
+        <div class="content-container" id="sports-content"></div>
+    </div>
+</div>
+
+<!-- Footer -->
+<div id="footer">
+    <div class="footer-icon" onclick="changePage(0)">
+        <img src="https://cdn-icons-png.flaticon.com/512/25/25694.png" alt="Home">
+        <div>Home</div>
+    </div>
+    <div class="footer-icon" onclick="changePage(1)">
+        <img src="https://cdn-icons-png.flaticon.com/512/1040/1040259.png" alt="Movies">
+        <div>Movies</div>
+    </div>
+    <div class="footer-icon highlight-icon" onclick="changePage(2)">
+        <img src="https://cdn-icons-png.flaticon.com/512/2554/2554964.png" alt="Highlights">
+        <div>Highlights</div>
+    </div>
+    <div class="footer-icon" onclick="changePage(3)">
+        <img src="https://cdn-icons-png.flaticon.com/512/69/69524.png" alt="Sports">
+        <div>Sports</div>
+    </div>
+</div>
+
+<script>
+    let currentIndex = 0;
+    const slider = document.getElementById("slider");
+
+    function changePage(index) {
+        currentIndex = index;
+        slider.style.transform = `translateX(-${index * 100}vw)`;
+        updateFooter(index);
+    }
+
+    function updateFooter(index) {
+        document.querySelectorAll(".footer-icon").forEach((icon, i) => {
+            icon.classList.toggle("active", i === index);
+        });
+    }
+
+    async function loadContent(url, containerId) {
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            const container = document.getElementById(containerId);
+            container.innerHTML = "";
+
+            data.forEach(item => {
+                const html = `
+                    <div class="thumbnail-box">
+                        <img class="thumbnail" src="${item.thumbnail}" alt="${item.title}">
+                        <div class="title">${item.title}</div>
+                        <div class="meta-info">${item.meta}</div>
+                        <div class="separator"></div>
+                    </div>
+                `;
+                container.innerHTML += html;
             });
-        } else {
-            document.body.innerHTML = "<h2>Video URL missing! Use ?url=your-video-url</h2>";
+        } catch (error) {
+            console.error("Error loading data:", error);
         }
-    </script>
+    }
+
+    window.onload = function() {
+        loadContent("https://raw.githubusercontent.com/greenhck/Ptv-Sports-/refs/heads/main/Movie", "movies-content");
+        loadContent("GITHUB_RAW_URL_HERE", "highlights-content");
+        loadContent("GITHUB_RAW_URL_HERE", "sports-content");
+    };
+</script>
 
 </body>
 </html>
