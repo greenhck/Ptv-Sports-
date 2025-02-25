@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JW Player WebPlayer</title>
+    <title>JW Player M3U8 Player</title>
     <script src="https://cdn.jwplayer.com/libraries/your-jwplayer-library-key.js"></script>
 </head>
 <body style="background: black; color: white; text-align: center;">
@@ -23,6 +23,7 @@
         if (videoUrl) {
             jwplayer("player").setup({
                 file: videoUrl,
+                type: "hls",  // M3U8 सपोर्ट के लिए
                 width: "100%",
                 aspectratio: "16:9",
                 autostart: false
