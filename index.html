@@ -1,48 +1,36 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Stream</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.20.3/video-js.min.css" rel="stylesheet">
-    <style>
-        /* प्लेयर को फुल स्क्रीन करने के लिए */
-        #my-video {
-            width: 100vw !important;
-            height: 100vh !important;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 9999;
-            background: black;
-        }
-    </style>
+    <title>JW Player WebPlayer</title>
+    <script src="https://cdn.jwplayer.com/libraries/your-jwplayer-library-key.js"></script>
 </head>
-<body>
+<body style="background: black; color: white; text-align: center;">
 
-<video id="my-video" class="video-js vjs-default-skin" controls autoplay preload="auto">
-    <source src="https://tes1.mylife1.top:8088/mobile/stream5_240p/playlist.m3u8?vidictid=201391703076&id=18&pk=e77add00c5af18d8ad5ca63111cf6d3593fbe0b82ccf4186ce455178f122f21f16fa60caf494c9ba2204e453dccdbfb8591753456720882976a403cdc6fde43a" type="application/x-mpegURL">
-</video>
+    <div id="player"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.20.3/video.min.js"></script>
-
-<script>
-    var player = videojs('my-video');
-    
-    // ऑटोमैटिक फुलस्क्रीन करने के लिए
-    player.ready(function() {
-        var videoElement = document.getElementById('my-video');
-        if (videoElement.requestFullscreen) {
-            videoElement.requestFullscreen();
-        } else if (videoElement.mozRequestFullScreen) {
-            videoElement.mozRequestFullScreen();
-        } else if (videoElement.webkitRequestFullscreen) {
-            videoElement.webkitRequestFullscreen();
-        } else if (videoElement.msRequestFullscreen) {
-            videoElement.msRequestFullscreen();
+    <script>
+        // URL से वीडियो लिंक प्राप्त करें
+        function getParameterByName(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
         }
-    });
-</script>
+
+        // वीडियो URL प्राप्त करें
+        const videoUrl = getParameterByName('url');
+
+        if (videoUrl) {
+            jwplayer("player").setup({
+                file: videoUrl,
+                width: "100%",
+                aspectratio: "16:9",
+                autostart: false
+            });
+        } else {
+            document.body.innerHTML = "<h2>Video URL missing! Use ?url=your-video-url</h2>";
+        }
+    </script>
 
 </body>
 </html>
