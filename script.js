@@ -1,4 +1,4 @@
- <script>
+
         const contentDisplay = document.getElementById('content-display');
         const tabButtons = document.querySelectorAll('.tab-button');
         const videoPlayerContainer = document.getElementById('video-player-container');
@@ -529,4 +529,3 @@
                 }
             }
         });
-    </script>
