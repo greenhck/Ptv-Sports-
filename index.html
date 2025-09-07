@@ -5,122 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="referrer" content="no-referrer" />
     <title>PEREGRINE LIVE</title>
+    <link rel="stylesheet" href="style.css">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="script.js"></script>
     <!-- Shaka Player for DASH/DRM -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.6/controls.min.css" crossorigin="anonymous"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.6/shaka-player.ui.min.js" crossorigin="anonymous"></script>
     <!-- Hls.js for HLS -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        /* Custom styles for scrollbar in tabs */
-        .tabs-container::-webkit-scrollbar {
-            height: 0px;
-        }
-        .tabs-container::-webkit-scrollbar-thumb,
-        .tabs-container::-webkit-scrollbar-track {
-            background-color: transparent;
-        }
-        /* Loading spinner animation */
-        .loading-spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #fff;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
-
-    <!-- Header Section -->
-    <header class="bg-black text-white px-2 sm:px-4 py-3 text-center sticky top-0 z-50 shadow-lg">
-        <div class="flex items-center justify-between">
-            <h1 class="text-xl sm:text-2xl font-bold flex-shrink-0" style="height: 40px; line-height: 40px;">PEREGRINE LIVE</h1>
-            <div class="flex-grow flex justify-end">
-                <input type="text" class="search-bar w-full max-w-xs px-4 py-2 rounded-full border border-gray-700 bg-gray-800 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow duration-300" placeholder="खोजें...">
-            </div>
-        </div>
-        <nav class="tabs-container overflow-x-auto flex justify-start items-center space-x-2 mt-4 pb-2 px-1">
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="fancode">Fancode</button>
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="zee-network">Zee Network</button>
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="pirates-tv">Pirates TV</button>
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="jio-tv">Jio TV</button>
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="others">Others</button>
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="jiostar">Jiostar</button>
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="n-stream">N Stream</button>
-        </nav>
-    </header>
-
-    <!-- Main Content Area -->
-    <main class="flex-grow p-2 sm:p-4 w-full mx-auto">
-        <!-- Video Player Container - placed between tabs and content -->
-        <div id="video-player-container" class="bg-gray-800 rounded-lg shadow-xl my-4 hidden flex-col space-y-4">
-            <div data-shaka-player-container class="w-full h-full max-h-screen aspect-video relative flex items-center justify-center">
-                <video autoplay data-shaka-player id="shaka-video-player" class="w-full h-full object-contain"></video>
-            </div>
-            <video id="hls-video-player" class="w-full h-full max-h-screen object-contain" controls></video>
-            
-            <div class="player-controls absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center space-x-4">
-                <select id="quality-selector" class="bg-gray-700 text-white py-2 px-4 rounded-full text-sm font-semibold hidden">
-                    <option value="auto">स्वचालित</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- N Stream Section -->
-        <div id="n-stream-player-section" class="bg-gray-800 p-5 rounded-lg shadow-xl mt-4 hidden flex-col space-y-4">
-            <h2 class="text-2xl font-semibold text-center">N Stream (मैन्युअल स्ट्रीम)</h2>
-            <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                <label for="stream-type-select" class="text-sm">स्ट्रीम प्रकार:</label>
-                <select id="stream-type-select" class="w-full sm:w-auto px-3 py-2 rounded-md bg-gray-700 border border-gray-600 text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                    <option value="HLS">HLS (M3U8)</option>
-                    <option value="DASH">DASH (MPD)</option>
-                </select>
-            </div>
-            <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                <label for="stream-url-input" class="text-sm">स्ट्रीम URL:</label>
-                <input type="text" id="stream-url-input" class="w-full px-3 py-2 rounded-md bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="यहां M3U8 या MPD लिंक डालें">
-            </div>
-            <div id="drm-controls" class="drm-inputs flex-col space-y-2 pl-4 border-l-2 border-gray-600 hidden">
-                <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                    <label for="clearkey-id-input" class="text-sm">Clear Key ID:</label>
-                    <input type="text" id="clearkey-id-input" class="w-full px-3 py-2 rounded-md bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Clear Key ID (हेक्स, डैश के बिना)">
-                </div>
-                <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                    <label for="clearkey-key-input" class="text-sm">Clear Key:</label>
-                    <input type="text" id="clearkey-key-input" class="w-full px-3 py-2 rounded-md bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Clear Key (हेक्स, डैश के बिना)">
-                </div>
-                <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                    <label for="drm-license-url-input" class="text-sm">DRM लाइसेंस URL:</label>
-                    <input type="text" id="drm-license-url-input" class="w-full px-3 py-2 rounded-md bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="DRM लाइसेंस URL (यदि आवश्यक हो)">
-                </div>
-            </div>
-            <div class="flex justify-end">
-                <button id="play-n-stream-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full transition-all duration-200">चलाएं</button>
-            </div>
-        </div>
-
-        <div id="content-display" class="content-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5 mt-4">
-            <!-- Channel cards will be inserted here -->
-        </div>
-    </main>
-
-    <!-- Footer Section -->
-    <footer class="bg-black text-gray-400 text-center text-sm py-4 mt-auto">
-        <p>&copy; 2025 PEREGRINE LIVE. सभी अधिकार सुरक्षित।</p>
-    </footer>
