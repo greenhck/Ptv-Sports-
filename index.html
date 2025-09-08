@@ -43,6 +43,24 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        /* Custom message box */
+        .custom-message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 1000;
+            text-align: center;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            max-width: 80%;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
@@ -125,6 +143,12 @@
         <p>&copy; 2025 PEREGRINE LIVE. सभी अधिकार सुरक्षित।</p>
     </footer>
 
+    <!-- Custom Message Box -->
+    <div id="custom-message-box" class="custom-message-box">
+        <p id="custom-message-text"></p>
+        <button onclick="document.getElementById('custom-message-box').style.display='none'" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200">ठीक है</button>
+    </div>
+
     <!-- JavaScript -->
     <script>
         // --- DevTool Blocking Logic (Improved) ---
@@ -175,6 +199,10 @@
         const drmLicenseUrlInput = document.getElementById('drm-license-url-input');
         const playNStreamBtn = document.getElementById('play-n-stream-btn');
 
+        // Custom message box elements
+        const customMessageBox = document.getElementById('custom-message-box');
+        const customMessageText = document.getElementById('custom-message-text');
+
         // GitHub Raw JSON URLs
         const tabDataUrls = {
             'zee-network': 'https://raw.githubusercontent.com/greenhck/batball/main/zee.json',
@@ -211,12 +239,12 @@
             const lines = m3uContent.split('\n').map(line => line.trim()).filter(line => line.length > 0);
             const channels = [];
             let currentChannel = {};
-            let currentLineIndex = 0;
 
-            while (currentLineIndex < lines.length) {
-                const line = lines[currentLineIndex];
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
 
                 if (line.startsWith('#EXTINF:')) {
+                    // Start of a new channel entry, reset data
                     currentChannel = {
                         name: 'Unknown Channel',
                         logo: '',
@@ -230,19 +258,18 @@
                     currentChannel.name = nameMatch ? nameMatch[1].trim() : 'Unknown Channel';
                     const logoMatch = line.match(/tvg-logo="([^"]+)"/);
                     currentChannel.logo = logoMatch ? logoMatch[1] : '';
-
-                    // Check for clear key on the same line
+                    
                     const clearKeyMatchInline = line.match(/license_key="([^:]+):([a-f0-9]+)"/);
                     if (clearKeyMatchInline) {
                         currentChannel.clearkey = { keyId: clearKeyMatchInline[1], key: clearKeyMatchInline[2] };
                     }
-                    
+
+                    // Scan subsequent lines for the stream URL and other metadata
                     let urlFound = false;
-                    let j = currentLineIndex + 1;
+                    let j = i + 1;
                     while (j < lines.length && !urlFound) {
                         const subLine = lines[j];
                         
-                        // Look for cookie and clear key on subsequent lines
                         if (subLine.startsWith('#EXTHTTP:')) {
                             const cookieMatch = subLine.match(/"cookie":"([^"]+)"/);
                             if (cookieMatch) {
@@ -256,21 +283,20 @@
                         } else if (!subLine.startsWith('#')) {
                             // Found the stream URL
                             if (subLine.includes('.mpd')) {
-                                currentChannel.mpd = subLine.split('&xxx=')[0];
+                                const mpdUrl = subLine.split('&xxx=')[0];
+                                currentChannel.mpd = mpdUrl;
                             } else if (subLine.includes('.m3u8')) {
                                 currentChannel.m3u8 = subLine;
                             }
                             urlFound = true;
-                            currentLineIndex = j;
+                            i = j; // Update the main loop index
                         }
                         j++;
                     }
                     if (currentChannel.mpd || currentChannel.m3u8) {
                         channels.push(currentChannel);
                     }
-
                 }
-                currentLineIndex++;
             }
             return channels;
         }
@@ -281,6 +307,8 @@
             contentDisplay.style.display = 'grid';
             videoPlayerContainer.classList.add('hidden');
             videoPlayerContainer.classList.remove('flex');
+            
+            showLoadingMessage();
 
             if (tabName === 'n-stream') {
                 contentDisplay.style.display = 'none';
@@ -289,17 +317,10 @@
                 return;
             }
 
-            contentDisplay.innerHTML = `
-                <div class="flex items-center justify-center p-4">
-                    <div class="loading-spinner mr-3"></div>
-                    <p class="text-center text-gray-400 font-semibold">Loading channels...</p>
-                </div>
-            `;
-
             const dataUrl = tabDataUrls[tabName];
 
             if (!dataUrl || dataUrl.includes('YOUR_')) {
-                contentDisplay.innerHTML = `<p class="text-center text-red-400 p-4 font-semibold">कृपया **${tabName}** टैब के लिए GitHub Raw JSON/M3U URL को कोड में अपडेट करें।</p>`;
+                showUserMessage(`कृपया **${tabName}** टैब के लिए GitHub Raw JSON/M3U URL को कोड में अपडेट करें।`);
                 return;
             }
 
@@ -315,7 +336,7 @@
                     if (data && data.channels) {
                         channelsToDisplay = data.channels;
                     } else {
-                        contentDisplay.innerHTML = `<p class="text-center text-gray-400 p-4">Zee Network के लिए अमान्य डेटा संरचना।</p>`;
+                        showUserMessage(`Zee Network के लिए अमान्य डेटा संरचना।`);
                         return;
                     }
                 } else if (tabName === 'fancode') {
@@ -329,7 +350,7 @@
                             clearkey: null
                         }));
                     } else {
-                        contentDisplay.innerHTML = `<p class="text-center text-gray-400 p-4">FanCode के लिए अमान्य डेटा संरचना।</p>`;
+                        showUserMessage(`FanCode के लिए अमान्य डेटा संरचना।`);
                         return;
                     }
                 } else {
@@ -338,8 +359,22 @@
                 }
                 displayChannels(channelsToDisplay);
             } catch (error) {
-                contentDisplay.innerHTML = `<p class="text-center text-gray-400 p-4">सामग्री लोड करने में त्रुटि हुई। कृपया बाद में पुनः प्रयास करें।</p>`;
+                showUserMessage(`सामग्री लोड करने में त्रुटि हुई। कृपया बाद में पुनः प्रयास करें।`);
             }
+        }
+
+        function showLoadingMessage() {
+            contentDisplay.innerHTML = `
+                <div class="flex items-center justify-center p-4">
+                    <div class="loading-spinner mr-3"></div>
+                    <p class="text-center text-gray-400 font-semibold">Loading channels...</p>
+                </div>
+            `;
+        }
+
+        function showUserMessage(message) {
+            customMessageText.innerText = message;
+            customMessageBox.style.display = 'flex';
         }
 
         // Player functions
@@ -458,6 +493,7 @@
                         hlsVideoElement.addEventListener('loadedmetadata', () => hlsVideoElement.play().catch(e => {}));
                         handlePlaybackLogic(hlsVideoElement);
                     } else {
+                        showUserMessage('इस ब्राउज़र में HLS स्ट्रीम चलाने के लिए समर्थन नहीं है।');
                         closePlayer();
                     }
                 } else if (channel.mpd) {
@@ -465,6 +501,7 @@
                     hlsVideoElement.style.display = 'none';
 
                     if (!shaka.Player.isBrowserSupported()) {
+                        showUserMessage('इस ब्राउज़र में DASH स्ट्रीम चलाने के लिए समर्थन नहीं है।');
                         closePlayer();
                         return;
                     }
@@ -506,19 +543,12 @@
                         }
                     }
 
-                    // Applying headers and cookie handling from your provided code
+                    // Applying headers and cookie handling
                     shakaPlayerInstance.getNetworkingEngine().registerRequestFilter((type, request) => {
-                        const cookieHeader = channel.cookie;
-                        if (cookieHeader) {
+                        if (channel.cookie) {
                             request.headers['Referer'] = 'https://www.jiotv.com/';
                             request.headers['User-Agent'] = "plaYtv/7.1.5 (Linux;Android 13) ExoPlayerLib/2.11.6";
-                            request.headers['Cookie'] = cookieHeader;
-                        }
-                        if ( (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || type === shaka.net.NetworkingEngine.RequestType.SEGMENT) && request.uris[0] && cookieHeader) {
-                            if (!request.uris[0].includes('__hdnea__=')) {
-                                const separator = request.uris[0].includes('?') ? '&' : '?';
-                                request.uris[0] += separator + cookieHeader;
-                            }
+                            request.headers['Cookie'] = channel.cookie;
                         }
                     });
                     
@@ -546,10 +576,13 @@
                     await shakaPlayerInstance.load(channel.mpd);
                     handlePlaybackLogic(shakaVideoElement);
                 } else {
+                    showUserMessage('स्ट्रीम URL उपलब्ध नहीं है या मान्य प्रारूप में नहीं है।');
                     closePlayer();
                 }
             } catch (e) {
-                onError(e);
+                console.error('Playback Error:', e);
+                showUserMessage('वीडियो चलाने में त्रुटि। चैनल काम नहीं कर रहा है या URL पुराना हो सकता है।');
+                closePlayer();
             }
         }
 
@@ -559,6 +592,8 @@
         }
 
         function onError(error) {
+            console.error('Shaka Player Error:', error);
+            showUserMessage('वीडियो चलाने में त्रुटि। चैनल काम नहीं कर रहा है या URL पुराना हो सकता है।');
             closePlayer();
         }
 
@@ -624,6 +659,7 @@
             };
 
             if (!streamUrl) {
+                showUserMessage('कृपया चलाने के लिए एक स्ट्रीम URL डालें।');
                 return;
             }
 
