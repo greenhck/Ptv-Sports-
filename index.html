@@ -211,9 +211,10 @@
             const lines = m3uContent.split('\n').map(line => line.trim()).filter(line => line.length > 0);
             const channels = [];
             let currentChannel = {};
+            let currentLineIndex = 0;
 
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
+            while (currentLineIndex < lines.length) {
+                const line = lines[currentLineIndex];
 
                 if (line.startsWith('#EXTINF:')) {
                     currentChannel = {
@@ -229,49 +230,47 @@
                     currentChannel.name = nameMatch ? nameMatch[1].trim() : 'Unknown Channel';
                     const logoMatch = line.match(/tvg-logo="([^"]+)"/);
                     currentChannel.logo = logoMatch ? logoMatch[1] : '';
-                    
-                    // Look for clear key information on the same line or the one below
-                    const clearKeyMatch = line.match(/license_key="([^:]+):([a-f0-9]+)"/);
-                    if (clearKeyMatch) {
-                        currentChannel.clearkey = {
-                            keyId: clearKeyMatch[1],
-                            key: clearKeyMatch[2]
-                        };
+
+                    // Check for clear key on the same line
+                    const clearKeyMatchInline = line.match(/license_key="([^:]+):([a-f0-9]+)"/);
+                    if (clearKeyMatchInline) {
+                        currentChannel.clearkey = { keyId: clearKeyMatchInline[1], key: clearKeyMatchInline[2] };
                     }
                     
                     let urlFound = false;
-                    let j = i + 1;
+                    let j = currentLineIndex + 1;
                     while (j < lines.length && !urlFound) {
                         const subLine = lines[j];
-                        if (subLine.startsWith('#KODIPROP:inputstream.adaptive.license_key=')) {
-                            const clearkeyMatch = subLine.match(/license_key=([^:]+):([a-f0-9]+)/);
-                            if (clearkeyMatch) {
-                                currentChannel.clearkey = {
-                                    keyId: clearkeyMatch[1],
-                                    key: clearkeyMatch[2]
-                                };
-                            }
-                        } else if (subLine.startsWith('#EXTHTTP:')) {
+                        
+                        // Look for cookie and clear key on subsequent lines
+                        if (subLine.startsWith('#EXTHTTP:')) {
                             const cookieMatch = subLine.match(/"cookie":"([^"]+)"/);
                             if (cookieMatch) {
                                 currentChannel.cookie = cookieMatch[1];
                             }
+                        } else if (subLine.startsWith('#KODIPROP:inputstream.adaptive.license_key=')) {
+                            const clearkeyMatch = subLine.match(/license_key=([^:]+):([a-f0-9]+)/);
+                            if (clearkeyMatch) {
+                                currentChannel.clearkey = { keyId: clearkeyMatch[1], key: clearkeyMatch[2] };
+                            }
                         } else if (!subLine.startsWith('#')) {
+                            // Found the stream URL
                             if (subLine.includes('.mpd')) {
-                                const mpdUrl = subLine.split('&xxx=')[0];
-                                currentChannel.mpd = mpdUrl;
+                                currentChannel.mpd = subLine.split('&xxx=')[0];
                             } else if (subLine.includes('.m3u8')) {
                                 currentChannel.m3u8 = subLine;
                             }
                             urlFound = true;
-                            i = j;
+                            currentLineIndex = j;
                         }
                         j++;
                     }
                     if (currentChannel.mpd || currentChannel.m3u8) {
                         channels.push(currentChannel);
                     }
+
                 }
+                currentLineIndex++;
             }
             return channels;
         }
