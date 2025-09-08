@@ -182,7 +182,8 @@
             'pirates-tv': 'https://raw.githubusercontent.com/FunctionError/PiratesTv/main/combined_playlist.m3u',
             'jio-tv': 'https://raw.githubusercontent.com/rocket12-18/dineshbhai/refs/heads/main/jd.m3u',
             'others': 'https://raw.githubusercontent.com/FunctionError/PiratesTv/main/combine_playlist.m3u',
-            'jiostar': 'https://raw.githubusercontent.com/alex4528/m3u/refs/heads/main/jtv.m3u',
+            // The new URL for JioStar from your provided code
+            'jiostar': 'https://raw.githubusercontent.com/alex4528/m3u/refs/heads/main/jstar.m3u',
             'n-stream': null,
         };
 
@@ -228,7 +229,16 @@
                     currentChannel.name = nameMatch ? nameMatch[1].trim() : 'Unknown Channel';
                     const logoMatch = line.match(/tvg-logo="([^"]+)"/);
                     currentChannel.logo = logoMatch ? logoMatch[1] : '';
-
+                    
+                    // Look for clear key information on the same line or the one below
+                    const clearKeyMatch = line.match(/license_key="([^:]+):([a-f0-9]+)"/);
+                    if (clearKeyMatch) {
+                        currentChannel.clearkey = {
+                            keyId: clearKeyMatch[1],
+                            key: clearKeyMatch[2]
+                        };
+                    }
+                    
                     let urlFound = false;
                     let j = i + 1;
                     while (j < lines.length && !urlFound) {
@@ -465,8 +475,30 @@
                             const controls = ui.getControls();
                             shakaPlayerInstance = controls.getPlayer();
                             shakaPlayerInstance.addEventListener('error', onErrorEvent);
+
+                            // Aggressive streaming configuration from user's provided code
                             shakaPlayerInstance.configure({
-                                streaming: { bufferingGoal: 1, rebufferingGoal: 0.5 }
+                                streaming: {
+                                    lowLatencyMode: true,
+                                    bufferingGoal: 15,
+                                    rebufferingGoal: 2,
+                                    bufferBehind: 15,
+                                    retryParameters: {
+                                        timeout: 10000,
+                                        maxAttempts: 5,
+                                        baseDelay: 300,
+                                        backoffFactor: 1.2
+                                    },
+                                    segmentRequestTimeout: 8000,
+                                    segmentPrefetchLimit: 2,
+                                    useNativeHlsOnSafari: true
+                                },
+                                manifest: {
+                                    retryParameters: {
+                                        timeout: 8000,
+                                        maxAttempts: 3
+                                    }
+                                }
                             });
                             isShakaUINotReady = false;
                         } else {
@@ -475,17 +507,18 @@
                         }
                     }
 
-                    // --- IMPORTANT CHANGE: APPLYING HEADERS & COOKIE HANDLING HERE ---
+                    // Applying headers and cookie handling from your provided code
                     shakaPlayerInstance.getNetworkingEngine().registerRequestFilter((type, request) => {
-                        if (channel.cookie) {
+                        const cookieHeader = channel.cookie;
+                        if (cookieHeader) {
                             request.headers['Referer'] = 'https://www.jiotv.com/';
                             request.headers['User-Agent'] = "plaYtv/7.1.5 (Linux;Android 13) ExoPlayerLib/2.11.6";
-                            request.headers['Cookie'] = channel.cookie;
+                            request.headers['Cookie'] = cookieHeader;
                         }
-                        if ( (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || type === shaka.net.NetworkingEngine.RequestType.SEGMENT) && request.uris[0] && channel.cookie) {
+                        if ( (type === shaka.net.NetworkingEngine.RequestType.MANIFEST || type === shaka.net.NetworkingEngine.RequestType.SEGMENT) && request.uris[0] && cookieHeader) {
                             if (!request.uris[0].includes('__hdnea__=')) {
                                 const separator = request.uris[0].includes('?') ? '&' : '?';
-                                request.uris[0] += separator + channel.cookie;
+                                request.uris[0] += separator + cookieHeader;
                             }
                         }
                     });
