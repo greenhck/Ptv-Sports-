@@ -139,26 +139,16 @@
             }
         });
         
-        // Use a continuous debugger check that's more reliable
-        const threshold = 160; // Increased threshold to avoid false positives.
-        let devtoolCheckInterval = null;
-        let lastTimestamp = 0;
-
+        // Use a more reliable check based on window dimensions.
         function checkDevTools() {
-            if (lastTimestamp === 0) {
-                lastTimestamp = performance.now();
-                return;
-            }
-            
-            const currentTimestamp = performance.now();
-            if (currentTimestamp - lastTimestamp > threshold) {
+            const threshold = 160;
+            if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
                 blockDevTools();
             }
-            lastTimestamp = currentTimestamp;
         }
 
-        // Start checking every 100ms
-        devtoolCheckInterval = setInterval(checkDevTools, 100);
+        // Check every 1 second
+        setInterval(checkDevTools, 1000);
         // --- End of DevTool Blocking Logic ---
 
         const contentDisplay = document.getElementById('content-display');
