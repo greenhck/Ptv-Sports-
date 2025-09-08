@@ -127,7 +127,7 @@
 
     <!-- JavaScript -->
     <script>
-        // --- DevTool Blocking Logic ---
+        // --- DevTool Blocking Logic (Improved) ---
         function blockDevTools() {
             window.location.href = 'about:blank';
         }
@@ -138,21 +138,23 @@
                 blockDevTools();
             }
         });
-
-        // Use a continuous debugger check
+        
+        // Use a continuous debugger check that's more reliable
+        const threshold = 160; // Increased threshold to avoid false positives.
         let devtoolCheckInterval = null;
-        let isDevToolsOpen = false;
+        let lastTimestamp = 0;
 
         function checkDevTools() {
-            try {
-                // This line will throw an exception if dev tools are open
-                (function() {}).constructor('debugger')();
-            } catch (err) {
-                if (!isDevToolsOpen) {
-                    isDevToolsOpen = true;
-                    blockDevTools();
-                }
+            if (lastTimestamp === 0) {
+                lastTimestamp = performance.now();
+                return;
             }
+            
+            const currentTimestamp = performance.now();
+            if (currentTimestamp - lastTimestamp > threshold) {
+                blockDevTools();
+            }
+            lastTimestamp = currentTimestamp;
         }
 
         // Start checking every 100ms
