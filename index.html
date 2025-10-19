@@ -29,6 +29,7 @@
       background: #000;
       object-fit: contain;
     }
+    /* Hide the default Shaka Spinner to use the custom loader */
     .shaka-spinner-container,
     .shaka-spinner,
     .shaka-spinner-svg {
@@ -37,7 +38,7 @@
       opacity: 0 !important;
     }
 
-    /* Chrome Only Modal */
+    /* Chrome Only Modal (for unsupported browsers) */
     .modal {
       position: fixed;
       top: 0;
@@ -72,7 +73,7 @@
     @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
     @keyframes scaleIn { to { transform: scale(1); opacity: 1 } }
 
-    /* Simple loader before video starts */
+    /* Custom loader before video starts */
     #loader {
       position: absolute;
       inset: 0;
@@ -113,18 +114,24 @@
   </div>
 
   <script>
-    // --- Constants from the original obfuscated script ---
+    // ----------------------------------------------------------------------
+    // --- Configuration Constants (De-obfuscated from Original Script) ---
+    // ----------------------------------------------------------------------
     const MANIFEST_URI = 'https://jiotvpllive.cdn.jio.com/bpk-tv/STR_HD1_Hindi/output/index.mpd';
     const REFERER_URL = 'https://www.jiotv.com/';
     const USER_AGENT = 'Mozilla/5.0 (Linux; Android 13) ExoPlayer/2.11.7.1';
-    // This value, appearing multiple times in the original script, seems to be a custom security cookie/token.
+    
+    // Custom security cookie/token derived from the original script
     const COOKIE_VALUE = '__hdnea__=st=1760825242~exp=1760911642~acl=/*~hmac=55fe33f638781994f217,1,1)cl=/*~hmac=64f65419817,1,1)d534ae2bf191097411f2d56cb6f07a75b9aff16e4ff9f4798';
     
-    // Clear Key configuration derived from the obfuscated script
+    // Clear Key configuration
     const CLEAR_KEY_ID = '400131994b445d8c8817202248760fda';
     const CLEAR_KEY_VALUE = '91b4560911642';
 
-    // --- Player Configuration Objects ---
+    // ----------------------------------------------------------------------
+    // --- Player Configuration Objects with Fixes Applied ---
+    // ----------------------------------------------------------------------
+    
     const drmConfig = {
       'clearKeys': {
         [CLEAR_KEY_ID]: CLEAR_KEY_VALUE
@@ -140,10 +147,12 @@
         'timeout': 10000,
         'maxAttempts': 5,
         'baseDelay': 300,
-        'backoffFactor': 1.2
+        'backoffFactor': 1.2,
+        // FIX: Moved segmentRequestTimeout into retryParameters to fix the warning
+        'segmentRequestTimeout': 8000, 
       },
-      'segmentRequestTimeout': 8000,
-      'segmentPrefetchLimit': 2
+      // segmentPrefetchLimit was originally outside retryParameters, keeping it here.
+      'segmentPrefetchLimit': 2 
     };
 
     const manifestConfig = {
@@ -155,8 +164,16 @@
 
     const uiConfig = {
       'controlPanelElements': [
-        'play_pause', 'spacer', 'time_and_duration', 'spacer', 'quality',
-        'language', 'volume', 'mute', 'pip', 'fullscreen'
+        'play_pause', 
+        'spacer', 
+        'time_and_duration', 
+        'spacer', 
+        'quality',
+        'language', 
+        'volume', 
+        'mute', 
+        'picture_in_picture', // FIX: Changed 'pip' to 'picture_in_picture' to resolve the TypeError/Warning
+        'fullscreen'
       ],
       'volumeBarColors': {
         'base': 'rgb(255,69,163)',
@@ -168,18 +185,21 @@
         'played': 'rgb(255,69,163)'
       }
     };
-    // ------------------------------------
+    
+    // ----------------------------------------------------------------------
+    // --- Shaka Player Initialization Logic ---
+    // ----------------------------------------------------------------------
 
     document.addEventListener('DOMContentLoaded', async () => {
       const video = document.getElementById('video');
       const loader = document.getElementById('loader');
       const chromeModal = document.getElementById('chromeModal');
 
-      // 1. Browser Check (based on the original's intent to target a specific environment)
+      // 1. Browser Check
       const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
       if (!isChrome) {
         chromeModal.classList.remove('hidden');
-        loader.style.display = 'none'; // Hide loader if modal is shown
+        loader.style.display = 'none';
         return;
       }
 
@@ -192,54 +212,53 @@
         return;
       }
 
-      // 3. Player Setup
+      // 3. Player & UI Setup
       const player = new shaka.Player(video);
-      await player.attach(video); // Attach to the video element
+      await player.attach(video); 
 
-      // 4. UI Setup
       const videoContainer = document.querySelector('.shaka-video-container');
       const ui = new shaka.ui.Overlay(player, videoContainer, video);
-      ui.configure(uiConfig);
+      ui.configure(uiConfig); // UI configuration uses the fixed settings
 
-      // 5. Player Configuration
+      // 4. Player Configuration
       player.configure({
         drm: drmConfig,
         streaming: streamingConfig,
         manifest: manifestConfig
       });
 
-      // 6. Network Filter (to set custom headers and inject token into URL)
+      // 5. Network Filter (Crucial for setting headers and tokens)
       player.getNetworkingEngine().registerRequestFilter((type, request) => {
-        // Set headers for all requests (MANIFEST, SEGMENT, etc.)
+        // Set HTTP Headers
         request.headers['Referer'] = REFERER_URL;
         request.headers['User-Agent'] = USER_AGENT;
         request.headers['Cookie'] = COOKIE_VALUE;
 
         // Logic to append the COOKIE_VALUE token to the segment/manifest URL
-        // but only if the URL doesn't already contain the token
         const isMediaRequest = type === shaka.net.RequestType.SEGMENT || type === shaka.net.RequestType.MANIFEST;
 
         if (isMediaRequest && request.uris.length > 0) {
           const uri = request.uris[0];
-          // Check if the URI already contains the token/cookie value
+          // Check if the URI already contains the token
           if (!uri.includes(CLEAR_KEY_VALUE)) { 
             const separator = uri.includes('?') ? '&' : '?';
+            // Append the full COOKIE_VALUE to the URI
             request.uris[0] = uri + separator + COOKIE_VALUE;
           }
         }
       });
 
-      // 7. Load and Autoplay Logic (with retry for play() promise rejection)
+      // 6. Load and Autoplay Logic (with retry for play() promise rejection)
       const attemptPlay = async () => {
         try {
-          // 7a. Load the stream
+          // Load the stream
           await player.load(MANIFEST_URI);
-          video.muted = true; // Ensure muted is true before attempting to play
+          video.muted = true; 
 
-          // 7b. Attempt to play
+          // Attempt to play
           await video.play();
 
-          // 7c. Play successful: hide loader and attempt to unmute after a short delay
+          // Play successful: hide loader and attempt to unmute
           loader.style.display = 'none';
           video.addEventListener('playing', () => {
             setTimeout(() => {
@@ -248,24 +267,22 @@
           }, { once: true });
 
         } catch (error) {
-          // Playback failed (likely due to auto-play restrictions)
           loader.style.display = 'none';
-          console.warn('Autoplay blocked, trying muted or retrying load...', error);
+          console.warn('Autoplay blocked or load failed, retrying...', error);
           
-          // Retry logic from the original script
+          // Retry logic derived from the original script
           setTimeout(attemptPlay, 1500); 
         }
       };
 
-      // Start the attempt
+      // Start the attempt once the video element is ready
       if (video.readyState >= 2) {
         attemptPlay();
       } else {
-        // Use 'canplay' event as the initial trigger for loading
         video.addEventListener('canplay', attemptPlay, { once: true });
       }
 
-      // Hide the loader on fatal player error
+      // Ensure the loader hides on fatal error
       player.addEventListener('error', () => {
           loader.style.display = 'none';
       });
