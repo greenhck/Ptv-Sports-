@@ -144,8 +144,8 @@
       'rebufferingGoal': 2,
       'bufferBehind': 15,
       
-      // FIX APPLIED HERE: segmentRequestTimeout must be a direct child of 'streaming'.
-      'segmentRequestTimeout': 8000, 
+      // FINAL FIX: segmentRequestTimeout is removed as it is unrecognized in this Shaka version.
+      // Timeout control is handled by retryParameters.timeout (10000ms).
       'segmentPrefetchLimit': 2,
       
       'retryParameters': {
