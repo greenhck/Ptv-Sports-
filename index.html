@@ -1,760 +1,275 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <meta name="referrer" content="no-referrer" />
-    <title>PEREGRINE LIVE</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Font -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Shaka Player for DASH/DRM -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.6/controls.min.css" crossorigin="anonymous"/>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.6/shaka-player.ui.min.js" crossorigin="anonymous"></script>
-    <!-- Hls.js for HLS -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        /* Custom styles for scrollbar in tabs */
-        .tabs-container::-webkit-scrollbar {
-            height: 0px;
-        }
-        .tabs-container::-webkit-scrollbar-thumb,
-        .tabs-container::-webkit-scrollbar-track {
-            background-color: transparent;
-        }
-        /* Loading spinner animation */
-        .loading-spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #fff;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        /* Custom message box */
-        .custom-message-box {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            z-index: 1000;
-            text-align: center;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            max-width: 80%;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Perelive pages dev</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.ui.min.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css" crossorigin="anonymous">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      background: #000;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .shaka-video-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      object-fit: contain;
+    }
+    .shaka-spinner-container,
+    .shaka-spinner,
+    .shaka-spinner-svg {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+    }
+
+    /* Chrome Only Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      backdrop-filter: blur(6px);
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      animation: fadeIn .5s ease;
+    }
+    .modal.hidden { display: none !important; }
+    .modal-content {
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px solid rgba(255, 0, 0, 0.3);
+      border-radius: 20px;
+      padding: 30px 25px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      color: #f3f4f6;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      backdrop-filter: blur(12px);
+      transform: scale(.95);
+      animation: scaleIn .4s ease forwards;
+    }
+    .modal-content h2 { font-size: 24px; font-weight: 700; color: #f87171; margin-bottom: 16px; }
+    .modal-content p { font-size: 16px; color: #d1d5db; margin-bottom: 24px; line-height: 1.5; }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes scaleIn { to { transform: scale(1); opacity: 1 } }
+
+    /* Simple loader before video starts */
+    #loader {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      z-index: 2000;
+    }
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.2);
+      border-top: 4px solid #00ff99;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
+<body>
+  <div id="loader">
+    <div class="spinner"></div>
+  </div>
 
-    <!-- Header Section -->
-    <header class="bg-black text-white px-2 sm:px-4 py-3 text-center sticky top-0 z-50 shadow-lg">
-        <div class="flex items-center justify-between">
-            <h1 class="text-xl sm:text-2xl font-bold flex-shrink-0" style="height: 40px; line-height: 40px;">PEREGRINE LIVE</h1>
-            <div class="flex-grow flex justify-end">
-                <input type="text" class="search-bar w-full max-w-xs px-4 py-2 rounded-full border border-gray-700 bg-gray-800 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow duration-300" placeholder="खोजें...">
-            </div>
-        </div>
-        <nav class="tabs-container overflow-x-auto flex justify-start items-center space-x-2 mt-4 pb-2 px-1">
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="fancode">Fancode</button>
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="zee-network">Zee Network</button>
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="pirates-tv">Pirates TV</button>
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="jio-tv">Jio TV</button>
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="others">Others</button>
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="jiostar">Jiostar</button>
-            <button class="tab-button flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-md transform hover:-translate-y-1" data-tab="n-stream">N Stream</button>
-        </nav>
-    </header>
-
-    <!-- Main Content Area -->
-    <main class="flex-grow p-2 sm:p-4 w-full mx-auto">
-        <!-- Video Player Container - placed between tabs and content -->
-        <div id="video-player-container" class="bg-gray-800 rounded-lg shadow-xl my-4 hidden flex-col space-y-4">
-            <div data-shaka-player-container class="w-full h-full max-h-screen aspect-video relative flex items-center justify-center">
-                <video autoplay data-shaka-player id="shaka-video-player" class="w-full h-full object-contain"></video>
-            </div>
-            <video id="hls-video-player" class="w-full h-full max-h-screen object-contain" controls></video>
-            
-            <div class="player-controls absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center space-x-4">
-                <select id="quality-selector" class="bg-gray-700 text-white py-2 px-4 rounded-full text-sm font-semibold hidden">
-                    <option value="auto">स्वचालित</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- N Stream Section -->
-        <div id="n-stream-player-section" class="bg-gray-800 p-5 rounded-lg shadow-xl mt-4 hidden flex-col space-y-4">
-            <h2 class="text-2xl font-semibold text-center">N Stream (मैन्युअल स्ट्रीम)</h2>
-            <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                <label for="stream-type-select" class="text-sm">स्ट्रीम प्रकार:</label>
-                <select id="stream-type-select" class="w-full sm:w-auto px-3 py-2 rounded-md bg-gray-700 border border-gray-600 text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                    <option value="HLS">HLS (M3U8)</option>
-                    <option value="DASH">DASH (MPD)</option>
-                </select>
-            </div>
-            <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                <label for="stream-url-input" class="text-sm">स्ट्रीम URL:</label>
-                <input type="text" id="stream-url-input" class="w-full px-3 py-2 rounded-md bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="यहां M3U8 या MPD लिंक डालें">
-            </div>
-            <div id="drm-controls" class="drm-inputs flex-col space-y-2 pl-4 border-l-2 border-gray-600 hidden">
-                <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                    <label for="clearkey-id-input" class="text-sm">Clear Key ID:</label>
-                    <input type="text" id="clearkey-id-input" class="w-full px-3 py-2 rounded-md bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Clear Key ID (हेक्स, डैश के बिना)">
-                </div>
-                <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                    <label for="clearkey-key-input" class="text-sm">Clear Key:</label>
-                    <input type="text" id="clearkey-key-input" class="w-full px-3 py-2 rounded-md bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Clear Key (हेक्स, डैश के बिना)">
-                </div>
-                <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                    <label for="drm-license-url-input" class="text-sm">DRM लाइसेंस URL:</label>
-                    <input type="text" id="drm-license-url-input" class="w-full px-3 py-2 rounded-md bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="DRM लाइसेंस URL (यदि आवश्यक हो)">
-                </div>
-            </div>
-            <div class="flex justify-end">
-                <button id="play-n-stream-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full transition-all duration-200">चलाएं</button>
-            </div>
-        </div>
-        
-        <div id="content-display" class="content-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5 mt-4">
-            <!-- Channel cards will be inserted here -->
-        </div>
-    </main>
-
-    <!-- Footer Section -->
-    <footer class="bg-black text-gray-400 text-center text-sm py-4 mt-auto">
-        <p>&copy; 2025 PEREGRINE LIVE. सभी अधिकार सुरक्षित।</p>
-    </footer>
-
-    <!-- Custom Message Box -->
-    <div id="custom-message-box" class="custom-message-box">
-        <p id="custom-message-text"></p>
-        <button onclick="document.getElementById('custom-message-box').style.display='none'" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200">ठीक है</button>
+  <div id="chromeModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <h2>⚠️ Browser Not Supported</h2>
+      <p>This content requires a browser with Media Source Extensions (MSE) support, such as Google Chrome, to play correctly.</p>
     </div>
+  </div>
 
-    <!-- JavaScript -->
-    <script>
-        // --- DevTool Blocking Logic (Improved) ---
-        function blockDevTools() {
-            window.location.href = 'about:blank';
+  <div class="shaka-video-container" data-shaka-player>
+    <video id="video" autoplay muted playsinline preload="auto" poster=""></video>
+  </div>
+
+  <script>
+    // --- Constants from the original obfuscated script ---
+    const MANIFEST_URI = 'https://jiotvpllive.cdn.jio.com/bpk-tv/STR_HD1_Hindi/output/index.mpd';
+    const REFERER_URL = 'https://www.jiotv.com/';
+    const USER_AGENT = 'Mozilla/5.0 (Linux; Android 13) ExoPlayer/2.11.7.1';
+    // This value, appearing multiple times in the original script, seems to be a custom security cookie/token.
+    const COOKIE_VALUE = '__hdnea__=st=1760825242~exp=1760911642~acl=/*~hmac=55fe33f638781994f217,1,1)cl=/*~hmac=64f65419817,1,1)d534ae2bf191097411f2d56cb6f07a75b9aff16e4ff9f4798';
+    
+    // Clear Key configuration derived from the obfuscated script
+    const CLEAR_KEY_ID = '400131994b445d8c8817202248760fda';
+    const CLEAR_KEY_VALUE = '91b4560911642';
+
+    // --- Player Configuration Objects ---
+    const drmConfig = {
+      'clearKeys': {
+        [CLEAR_KEY_ID]: CLEAR_KEY_VALUE
+      }
+    };
+
+    const streamingConfig = {
+      'lowLatencyMode': true,
+      'bufferingGoal': 15,
+      'rebufferingGoal': 2,
+      'bufferBehind': 15,
+      'retryParameters': {
+        'timeout': 10000,
+        'maxAttempts': 5,
+        'baseDelay': 300,
+        'backoffFactor': 1.2
+      },
+      'segmentRequestTimeout': 8000,
+      'segmentPrefetchLimit': 2
+    };
+
+    const manifestConfig = {
+      'retryParameters': {
+        'timeout': 8000,
+        'maxAttempts': 3
+      }
+    };
+
+    const uiConfig = {
+      'controlPanelElements': [
+        'play_pause', 'spacer', 'time_and_duration', 'spacer', 'quality',
+        'language', 'volume', 'mute', 'pip', 'fullscreen'
+      ],
+      'volumeBarColors': {
+        'base': 'rgb(255,69,163)',
+        'level': 'rgb(35,99,163)'
+      },
+      'seekBarColors': {
+        'base': 'rgba(63,189,247,0.2)',
+        'buffered': 'rgb(41,41,163)',
+        'played': 'rgb(255,69,163)'
+      }
+    };
+    // ------------------------------------
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const video = document.getElementById('video');
+      const loader = document.getElementById('loader');
+      const chromeModal = document.getElementById('chromeModal');
+
+      // 1. Browser Check (based on the original's intent to target a specific environment)
+      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+      if (!isChrome) {
+        chromeModal.classList.remove('hidden');
+        loader.style.display = 'none'; // Hide loader if modal is shown
+        return;
+      }
+
+      // 2. Polyfill & Capability Check
+      shaka.polyfill.installAll();
+      if (!shaka.Player.isBrowserSupported()) {
+        console.warn('Browser not supported.');
+        chromeModal.classList.remove('hidden');
+        loader.style.display = 'none';
+        return;
+      }
+
+      // 3. Player Setup
+      const player = new shaka.Player(video);
+      await player.attach(video); // Attach to the video element
+
+      // 4. UI Setup
+      const videoContainer = document.querySelector('.shaka-video-container');
+      const ui = new shaka.ui.Overlay(player, videoContainer, video);
+      ui.configure(uiConfig);
+
+      // 5. Player Configuration
+      player.configure({
+        drm: drmConfig,
+        streaming: streamingConfig,
+        manifest: manifestConfig
+      });
+
+      // 6. Network Filter (to set custom headers and inject token into URL)
+      player.getNetworkingEngine().registerRequestFilter((type, request) => {
+        // Set headers for all requests (MANIFEST, SEGMENT, etc.)
+        request.headers['Referer'] = REFERER_URL;
+        request.headers['User-Agent'] = USER_AGENT;
+        request.headers['Cookie'] = COOKIE_VALUE;
+
+        // Logic to append the COOKIE_VALUE token to the segment/manifest URL
+        // but only if the URL doesn't already contain the token
+        const isMediaRequest = type === shaka.net.RequestType.SEGMENT || type === shaka.net.RequestType.MANIFEST;
+
+        if (isMediaRequest && request.uris.length > 0) {
+          const uri = request.uris[0];
+          // Check if the URI already contains the token/cookie value
+          if (!uri.includes(CLEAR_KEY_VALUE)) { 
+            const separator = uri.includes('?') ? '&' : '?';
+            request.uris[0] = uri + separator + COOKIE_VALUE;
+          }
         }
+      });
 
-        // Check for common keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.ctrlKey && e.shiftKey && e.key === 'J') || (e.ctrlKey && e.key === 'U')) {
-                blockDevTools();
-            }
-        });
-        
-        // Use a more reliable check based on window dimensions.
-        function checkDevTools() {
-            const threshold = 160;
-            if (window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold) {
-                blockDevTools();
-            }
+      // 7. Load and Autoplay Logic (with retry for play() promise rejection)
+      const attemptPlay = async () => {
+        try {
+          // 7a. Load the stream
+          await player.load(MANIFEST_URI);
+          video.muted = true; // Ensure muted is true before attempting to play
+
+          // 7b. Attempt to play
+          await video.play();
+
+          // 7c. Play successful: hide loader and attempt to unmute after a short delay
+          loader.style.display = 'none';
+          video.addEventListener('playing', () => {
+            setTimeout(() => {
+              video.muted = false; // Unmute after video starts playing
+            }, 300);
+          }, { once: true });
+
+        } catch (error) {
+          // Playback failed (likely due to auto-play restrictions)
+          loader.style.display = 'none';
+          console.warn('Autoplay blocked, trying muted or retrying load...', error);
+          
+          // Retry logic from the original script
+          setTimeout(attemptPlay, 1500); 
         }
+      };
 
-        // Check every 1 second
-        setInterval(checkDevTools, 1000);
-        // --- End of DevTool Blocking Logic ---
+      // Start the attempt
+      if (video.readyState >= 2) {
+        attemptPlay();
+      } else {
+        // Use 'canplay' event as the initial trigger for loading
+        video.addEventListener('canplay', attemptPlay, { once: true });
+      }
 
-        const contentDisplay = document.getElementById('content-display');
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const videoPlayerContainer = document.getElementById('video-player-container');
-        const shakaVideoContainer = document.getElementById('shaka-video-player').parentNode;
-        const shakaVideoElement = document.getElementById('shaka-video-player');
-        const hlsVideoElement = document.getElementById('hls-video-player');
-        
-        const qualitySelector = document.getElementById('quality-selector');
-        
-        let shakaPlayerInstance = null;
-        let hlsPlayer = null;
-        let currentLoadedChannels = [];
-        let isShakaUINotReady = true;
+      // Hide the loader on fatal player error
+      player.addEventListener('error', () => {
+          loader.style.display = 'none';
+      });
 
-        // N Stream elements
-        const nStreamPlayerSection = document.getElementById('n-stream-player-section');
-        const streamTypeSelect = document.getElementById('stream-type-select');
-        const streamUrlInput = document.getElementById('stream-url-input');
-        const drmControls = document.getElementById('drm-controls');
-        const clearkeyIdInput = document.getElementById('clearkey-id-input');
-        const clearkeyKeyInput = document.getElementById('clearkey-key-input');
-        const drmLicenseUrlInput = document.getElementById('drm-license-url-input');
-        const playNStreamBtn = document.getElementById('play-n-stream-btn');
-
-        // Custom message box elements
-        const customMessageBox = document.getElementById('custom-message-box');
-        const customMessageText = document.getElementById('custom-message-text');
-
-        // GitHub Raw JSON URLs
-        const tabDataUrls = {
-            'zee-network': 'https://raw.githubusercontent.com/greenhck/batball/main/zee.json',
-            'fancode': 'https://raw.githubusercontent.com/Odfinity/live-events/refs/heads/main/fancode/data.json',
-            'pirates-tv': 'https://raw.githubusercontent.com/FunctionError/PiratesTv/main/combined_playlist.m3u',
-            'jio-tv': 'https://raw.githubusercontent.com/rocket12-18/dineshbhai/refs/heads/main/jd.m3u',
-            'others': 'https://raw.githubusercontent.com/FunctionError/PiratesTv/main/combine_playlist.m3u',
-            // The new URL for JioStar from your provided code
-            'jiostar': 'https://raw.githubusercontent.com/alex4528/m3u/refs/heads/main/jstar.m3u',
-            'n-stream': null,
-        };
-
-        // Channel display functions
-        function displayChannels(channels) {
-            currentLoadedChannels = channels;
-            contentDisplay.innerHTML = '';
-            if (channels.length === 0) {
-                contentDisplay.innerHTML = `<p class="text-center text-gray-400 p-4">कोई चैनल/मैच नहीं मिला।</p>`;
-                return;
-            }
-            channels.forEach(channel => {
-                const channelCard = document.createElement('div');
-                channelCard.classList.add('channel-card', 'bg-gray-800', 'rounded-lg', 'overflow-hidden', 'shadow-lg', 'cursor-pointer', 'transform', 'transition-transform', 'duration-200', 'hover:-translate-y-1', 'hover:shadow-2xl');
-                channelCard.innerHTML = `
-                    <img src="${channel.logo || 'https://placehold.co/200x150/2d3748/a0aec0?text=No+Image'}" alt="${channel.name}" class="w-full h-32 sm:h-40 object-cover">
-                    <h3 class="p-2 sm:p-3 text-sm sm:text-base font-semibold text-center truncate">${channel.name}</h3>
-                `;
-                channelCard.addEventListener('click', () => playChannel(channel));
-                contentDisplay.appendChild(channelCard);
-            });
-        }
-
-        async function parseM3U(m3uContent) {
-            const lines = m3uContent.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-            const channels = [];
-            let currentChannel = {};
-
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-
-                if (line.startsWith('#EXTINF:')) {
-                    // Start of a new channel entry, reset data
-                    currentChannel = {
-                        name: 'Unknown Channel',
-                        logo: '',
-                        mpd: null,
-                        m3u8: null,
-                        clearkey: null,
-                        cookie: null
-                    };
-
-                    const nameMatch = line.match(/,(.+)$/);
-                    currentChannel.name = nameMatch ? nameMatch[1].trim() : 'Unknown Channel';
-                    const logoMatch = line.match(/tvg-logo="([^"]+)"/);
-                    currentChannel.logo = logoMatch ? logoMatch[1] : '';
-                    
-                    const clearKeyMatchInline = line.match(/license_key="([^:]+):([a-f0-9]+)"/);
-                    if (clearKeyMatchInline) {
-                        currentChannel.clearkey = { keyId: clearKeyMatchInline[1], key: clearKeyMatchInline[2] };
-                    }
-
-                    // Scan subsequent lines for the stream URL and other metadata
-                    let urlFound = false;
-                    let j = i + 1;
-                    while (j < lines.length && !urlFound) {
-                        const subLine = lines[j];
-                        
-                        if (subLine.startsWith('#EXTHTTP:')) {
-                            const cookieMatch = subLine.match(/"cookie":"([^"]+)"/);
-                            if (cookieMatch) {
-                                currentChannel.cookie = cookieMatch[1];
-                            }
-                        } else if (subLine.startsWith('#KODIPROP:inputstream.adaptive.license_key=')) {
-                            const clearkeyMatch = subLine.match(/license_key=([^:]+):([a-f0-9]+)/);
-                            if (clearkeyMatch) {
-                                currentChannel.clearkey = { keyId: clearkeyMatch[1], key: clearkeyMatch[2] };
-                            }
-                        } else if (!subLine.startsWith('#')) {
-                            // Found the stream URL
-                            if (subLine.includes('.mpd')) {
-                                const mpdUrl = subLine.split('&xxx=')[0];
-                                currentChannel.mpd = mpdUrl;
-                            } else if (subLine.includes('.m3u8')) {
-                                currentChannel.m3u8 = subLine;
-                            }
-                            urlFound = true;
-                            i = j; // Update the main loop index
-                        }
-                        j++;
-                    }
-                    if (currentChannel.mpd || currentChannel.m3u8) {
-                        channels.push(currentChannel);
-                    }
-                }
-            }
-            return channels;
-        }
-
-        async function loadAndDisplayChannels(tabName) {
-            nStreamPlayerSection.classList.add('hidden');
-            nStreamPlayerSection.classList.remove('flex');
-            contentDisplay.style.display = 'grid';
-            videoPlayerContainer.classList.add('hidden');
-            videoPlayerContainer.classList.remove('flex');
-            
-            showLoadingMessage();
-
-            if (tabName === 'n-stream') {
-                contentDisplay.style.display = 'none';
-                nStreamPlayerSection.classList.remove('hidden');
-                nStreamPlayerSection.classList.add('flex');
-                return;
-            }
-
-            const dataUrl = tabDataUrls[tabName];
-
-            if (!dataUrl || dataUrl.includes('YOUR_')) {
-                showUserMessage(`कृपया **${tabName}** टैब के लिए GitHub Raw JSON/M3U URL को कोड में अपडेट करें।`);
-                return;
-            }
-
-            try {
-                const response = await fetch(dataUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP त्रुटि! स्थिति: ${response.status}`);
-                }
-                let channelsToDisplay = [];
-
-                if (tabName === 'zee-network') {
-                    const data = await response.json();
-                    if (data && data.channels) {
-                        channelsToDisplay = data.channels;
-                    } else {
-                        showUserMessage(`Zee Network के लिए अमान्य डेटा संरचना।`);
-                        return;
-                    }
-                } else if (tabName === 'fancode') {
-                    const data = await response.json();
-                    if (data && data.matches) {
-                        channelsToDisplay = data.matches.map(match => ({
-                            name: `${match.event_name}: ${match.match_name}`,
-                            logo: match.src || 'https://placehold.co/200x150/2d3748/a0aec0?text=No+Image',
-                            mpd: match.dai_url,
-                            m3u8: match.adfree_url,
-                            clearkey: null
-                        }));
-                    } else {
-                        showUserMessage(`FanCode के लिए अमान्य डेटा संरचना।`);
-                        return;
-                    }
-                } else {
-                    const m3uContent = await response.text();
-                    channelsToDisplay = await parseM3U(m3uContent);
-                }
-                displayChannels(channelsToDisplay);
-            } catch (error) {
-                showUserMessage(`सामग्री लोड करने में त्रुटि हुई। कृपया बाद में पुनः प्रयास करें।`);
-            }
-        }
-
-        function showLoadingMessage() {
-            contentDisplay.innerHTML = `
-                <div class="flex items-center justify-center p-4">
-                    <div class="loading-spinner mr-3"></div>
-                    <p class="text-center text-gray-400 font-semibold">Loading channels...</p>
-                </div>
-            `;
-        }
-
-        function showUserMessage(message) {
-            customMessageText.innerText = message;
-            customMessageBox.style.display = 'flex';
-        }
-
-        // Player functions
-        function resetPlayers() {
-            shakaVideoContainer.style.display = 'none';
-            hlsVideoElement.style.display = 'none';
-
-            if (shakaPlayerInstance) {
-                shakaPlayerInstance.unload().catch(e => {});
-            }
-            if (hlsPlayer) {
-                hlsPlayer.destroy();
-                hlsPlayer = null;
-            }
-
-            shakaVideoElement.pause();
-            shakaVideoElement.removeAttribute('src');
-            shakaVideoElement.load();
-
-            hlsVideoElement.pause();
-            hlsVideoElement.removeAttribute('src');
-            hlsVideoElement.load();
-
-            qualitySelector.innerHTML = '<option value="auto">स्वचालित</option>';
-            qualitySelector.classList.add('hidden');
-        }
-        
-        function handlePlaybackLogic(video) {
-            let hasUserInteracted = false;
-            const enableSoundOnInteraction = () => {
-                if (!hasUserInteracted && video.muted) {
-                    video.muted = false;
-                    hasUserInteracted = true;
-                }
-            };
-
-            ['click', 'touchstart', 'keydown'].forEach(event => {
-                document.addEventListener(event, enableSoundOnInteraction, { once: true });
-            });
-
-            video.addEventListener('loadedmetadata', () => {
-                video.volume = 0.8;
-            });
-
-            video.addEventListener('play', () => {
-                if (window.self === window.top && !document.fullscreenElement && window.innerWidth <= 768) {
-                    video.requestFullscreen().catch(() => {});
-                }
-            }, { once: true });
-            
-            video.addEventListener('waiting', () => {});
-
-            video.addEventListener('playing', () => {});
-
-            video.addEventListener('pause', () => {});
-
-            document.addEventListener('visibilitychange', () => {
-                if (!document.hidden && video.paused) {
-                    attemptAutoplay();
-                }
-            });
-
-            const attemptAutoplay = () => {
-                video.play().then(() => {}).catch(e => {});
-            };
-
-            if (video.readyState >= 3) {
-                attemptAutoplay();
-            } else {
-                video.addEventListener('canplay', attemptAutoplay, { once: true });
-                setTimeout(() => {
-                    if (video.paused) {
-                        attemptAutoplay();
-                    }
-                }, 2000);
-            }
-        }
-
-        async function playChannel(channel) {
-            videoPlayerContainer.classList.remove('hidden');
-            videoPlayerContainer.classList.add('flex');
-            resetPlayers();
-
-            shaka.polyfill.installAll();
-
-            try {
-                if (channel.m3u8) {
-                    shakaVideoContainer.style.display = 'none';
-                    hlsVideoElement.style.display = 'block';
-
-                    if (Hls.isSupported()) {
-                        hlsPlayer = new Hls();
-                        hlsPlayer.loadSource(channel.m3u8);
-                        hlsPlayer.attachMedia(hlsVideoElement);
-                        hlsPlayer.on(Hls.Events.MANIFEST_PARSED, function() {
-                            hlsVideoElement.play().catch(e => {});
-                            handlePlaybackLogic(hlsVideoElement);
-                        });
-                        hlsPlayer.on(Hls.Events.ERROR, function(event, data) {
-                            if (data.fatal) {
-                                switch(data.type) {
-                                case Hls.ErrorTypes.NETWORK_ERROR:
-                                    hlsPlayer.startLoad();
-                                    break;
-                                case Hls.ErrorTypes.MEDIA_ERROR:
-                                    hlsPlayer.recoverMediaError();
-                                    break;
-                                default:
-                                    closePlayer();
-                                    break;
-                                }
-                            }
-                        });
-                    } else if (hlsVideoElement.canPlayType('application/vnd.apple.mpegurl')) {
-                        hlsVideoElement.src = channel.m3u8;
-                        hlsVideoElement.addEventListener('loadedmetadata', () => hlsVideoElement.play().catch(e => {}));
-                        handlePlaybackLogic(hlsVideoElement);
-                    } else {
-                        showUserMessage('इस ब्राउज़र में HLS स्ट्रीम चलाने के लिए समर्थन नहीं है।');
-                        closePlayer();
-                    }
-                } else if (channel.mpd) {
-                    shakaVideoContainer.style.display = 'block';
-                    hlsVideoElement.style.display = 'none';
-
-                    if (!shaka.Player.isBrowserSupported()) {
-                        showUserMessage('इस ब्राउज़र में DASH स्ट्रीम चलाने के लिए समर्थन नहीं है।');
-                        closePlayer();
-                        return;
-                    }
-                    if (isShakaUINotReady || !shakaPlayerInstance) {
-                        const ui = shakaVideoElement['ui'];
-                        if (ui) {
-                            const controls = ui.getControls();
-                            shakaPlayerInstance = controls.getPlayer();
-                            shakaPlayerInstance.addEventListener('error', onErrorEvent);
-
-                            // Aggressive streaming configuration from user's provided code
-                            shakaPlayerInstance.configure({
-                                streaming: {
-                                    lowLatencyMode: true,
-                                    bufferingGoal: 15,
-                                    rebufferingGoal: 2,
-                                    bufferBehind: 15,
-                                    retryParameters: {
-                                        timeout: 10000,
-                                        maxAttempts: 5,
-                                        baseDelay: 300,
-                                        backoffFactor: 1.2
-                                    },
-                                    segmentRequestTimeout: 8000,
-                                    segmentPrefetchLimit: 2,
-                                    useNativeHlsOnSafari: true
-                                },
-                                manifest: {
-                                    retryParameters: {
-                                        timeout: 8000,
-                                        maxAttempts: 3
-                                    }
-                                }
-                            });
-                            isShakaUINotReady = false;
-                        } else {
-                            closePlayer();
-                            return;
-                        }
-                    }
-
-                    // Applying headers and cookie handling
-                    shakaPlayerInstance.getNetworkingEngine().registerRequestFilter((type, request) => {
-                        if (channel.cookie) {
-                            request.headers['Referer'] = 'https://www.jiotv.com/';
-                            request.headers['User-Agent'] = "plaYtv/7.1.5 (Linux;Android 13) ExoPlayerLib/2.11.6";
-                            request.headers['Cookie'] = channel.cookie;
-                        }
-                    });
-                    
-                    if (channel.clearkey && channel.clearkey.keyId && channel.clearkey.key) {
-                        const keyId = channel.clearkey.keyId.replace(/-/g, '');
-                        const key = channel.clearkey.key.replace(/-/g, '');
-                        shakaPlayerInstance.configure({
-                            drm: { clearKeys: { [keyId]: key } }
-                        });
-                    } else if (channel.drm && channel.drm.licenseUrl) {
-                        const servers = {};
-                        if (channel.drm.type === 'widevine') {
-                            servers['com.widevine.alpha'] = channel.drm.licenseUrl;
-                        }
-                        shakaPlayerInstance.configure({
-                            drm: {
-                                servers: servers,
-                                advanced: {}
-                            }
-                        });
-                    } else {
-                        shakaPlayerInstance.configure({ drm: {} });
-                    }
-
-                    await shakaPlayerInstance.load(channel.mpd);
-                    handlePlaybackLogic(shakaVideoElement);
-                } else {
-                    showUserMessage('स्ट्रीम URL उपलब्ध नहीं है या मान्य प्रारूप में नहीं है।');
-                    closePlayer();
-                }
-            } catch (e) {
-                console.error('Playback Error:', e);
-                showUserMessage('वीडियो चलाने में त्रुटि। चैनल काम नहीं कर रहा है या URL पुराना हो सकता है।');
-                closePlayer();
-            }
-        }
-
-        // Shaka Player error handler
-        function onErrorEvent(event) {
-            onError(event.detail);
-        }
-
-        function onError(error) {
-            console.error('Shaka Player Error:', error);
-            showUserMessage('वीडियो चलाने में त्रुटि। चैनल काम नहीं कर रहा है या URL पुराना हो सकता है।');
-            closePlayer();
-        }
-
-        function closePlayer() {
-            videoPlayerContainer.classList.add('hidden');
-            videoPlayerContainer.classList.remove('flex');
-            resetPlayers();
-        }
-
-        // Event listeners
-        tabButtons.forEach(button => {
-            button.addEventListener('click', (event) => {
-                tabButtons.forEach(btn => {
-                    btn.classList.remove('active');
-                    btn.classList.remove('bg-gray-600', 'hover:bg-gray-500', 'shadow-inner');
-                    btn.classList.add('bg-gray-700', 'hover:bg-gray-600', 'shadow-md');
-                });
-                event.target.classList.add('active', 'bg-gray-600', 'hover:bg-gray-500', 'shadow-inner');
-                event.target.classList.remove('bg-gray-700', 'hover:bg-gray-600');
-
-                const tab = event.target.dataset.tab;
-                localStorage.setItem('activeTab', tab);
-                loadAndDisplayChannels(tab);
-            });
-        });
-
-        const searchBar = document.querySelector('.search-bar');
-        searchBar.addEventListener('input', (event) => {
-            const searchTerm = event.target.value.toLowerCase();
-            if (nStreamPlayerSection.classList.contains('flex')) {
-                return;
-            }
-            const filteredChannels = currentLoadedChannels.filter(channel =>
-                channel.name.toLowerCase().includes(searchTerm)
-            );
-            displayChannels(filteredChannels);
-        });
-
-        // N Stream specific logic
-        streamTypeSelect.addEventListener('change', () => {
-            if (streamTypeSelect.value === 'DASH') {
-                drmControls.classList.remove('hidden');
-                drmControls.classList.add('flex');
-            } else {
-                drmControls.classList.add('hidden');
-                drmControls.classList.remove('flex');
-                clearkeyIdInput.value = '';
-                clearkeyKeyInput.value = '';
-                drmLicenseUrlInput.value = '';
-            }
-        });
-
-        playNStreamBtn.addEventListener('click', () => {
-            const streamUrl = streamUrlInput.value.trim();
-            const streamType = streamTypeSelect.value;
-            let channelConfig = {
-                name: 'N Stream Custom Playback',
-                logo: '',
-                mpd: null,
-                m3u8: null,
-                clearkey: null,
-                drm: null
-            };
-
-            if (!streamUrl) {
-                showUserMessage('कृपया चलाने के लिए एक स्ट्रीम URL डालें।');
-                return;
-            }
-
-            if (streamType === 'HLS') {
-                channelConfig.m3u8 = streamUrl;
-            } else if (streamType === 'DASH') {
-                channelConfig.mpd = streamUrl;
-                const clearkeyId = clearkeyIdInput.value.trim();
-                const clearkeyKey = clearkeyKeyInput.value.trim();
-                const drmLicenseUrl = drmLicenseUrlInput.value.trim();
-
-                if (clearkeyId && clearkeyKey) {
-                    channelConfig.clearkey = {
-                        keyId: clearkeyId,
-                        key: clearkeyKey
-                    };
-                }
-                if (drmLicenseUrl) {
-                    channelConfig.drm = {
-                        type: 'widevine',
-                        licenseUrl: drmLicenseUrl
-                    };
-                }
-            }
-            playChannel(channelConfig);
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const savedTab = localStorage.getItem('activeTab');
-            let tabToActivate = savedTab || 'jio-tv'; // Default to jio-tv
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const nParam = urlParams.get('n');
-
-            if (nParam) {
-                tabToActivate = 'n-stream';
-                let streamUrl = nParam;
-                let clearkeyId = '';
-                let clearkeyKey = '';
-                let drmLicenseUrl = '';
-                let streamType = 'HLS';
-
-                const dashClearKeyPattern = /^([^|]+)\|drmScheme=clearkey&drmLicense=([^:]+):(.+)$/;
-                const matchClearKey = nParam.match(dashClearKeyPattern);
-
-                if (matchClearKey) {
-                    streamType = 'DASH';
-                    streamUrl = matchClearKey[1];
-                    clearkeyId = matchClearKey[2];
-                    clearkeyKey = matchClearKey[3];
-                    drmLicenseUrl = '';
-                }
-                else if (streamUrl.includes('.mpd')) {
-                    streamType = 'DASH';
-                    clearkeyId = '';
-                    clearkeyKey = '';
-                    drmLicenseUrl = '';
-                } else if (streamUrl.includes('.m3u8')) {
-                    streamType = 'HLS';
-                    clearkeyId = '';
-                    clearkeyKey = '';
-                    drmLicenseUrl = '';
-                }
-
-                const nStreamTabButton = document.querySelector('.tab-button[data-tab="n-stream"]');
-                if (nStreamTabButton) {
-                    nStreamTabButton.click();
-                    setTimeout(() => {
-                        streamUrlInput.value = streamUrl;
-                        streamTypeSelect.value = streamType;
-                        const changeEvent = new Event('change');
-                        streamTypeSelect.dispatchEvent(changeEvent);
-                        if (streamType === 'DASH') {
-                            clearkeyIdInput.value = clearkeyId;
-                            clearkeyKeyInput.value = clearkeyKey;
-                            drmLicenseUrlInput.value = drmLicenseUrl;
-                        } else {
-                            drmControls.classList.add('hidden');
-                            drmControls.classList.remove('flex');
-                            clearkeyIdInput.value = '';
-                            clearkeyKeyInput.value = '';
-                            drmLicenseUrlInput.value = '';
-                        }
-                        playNStreamBtn.click();
-                    }, 100);
-                }
-            } else {
-                const defaultButton = document.querySelector(`.tab-button[data-tab="${tabToActivate}"]`);
-                if (defaultButton) {
-                    defaultButton.click();
-                } else {
-                    document.querySelector('.tab-button[data-tab="jio-tv"]').click();
-                }
-            }
-        });
-    </script>
-</body>
+    });
+  </script>
 </html>
