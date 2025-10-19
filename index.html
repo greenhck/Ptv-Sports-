@@ -129,7 +129,7 @@
     const CLEAR_KEY_VALUE = '91b4560911642';
 
     // ----------------------------------------------------------------------
-    // --- Player Configuration Objects with Fixes Applied ---
+    // --- Player Configuration Objects with Final Fixes Applied ---
     // ----------------------------------------------------------------------
     
     const drmConfig = {
@@ -143,16 +143,17 @@
       'bufferingGoal': 15,
       'rebufferingGoal': 2,
       'bufferBehind': 15,
+      
+      // FIX APPLIED HERE: segmentRequestTimeout must be a direct child of 'streaming'.
+      'segmentRequestTimeout': 8000, 
+      'segmentPrefetchLimit': 2,
+      
       'retryParameters': {
         'timeout': 10000,
         'maxAttempts': 5,
         'baseDelay': 300,
         'backoffFactor': 1.2,
-        // FIX: Moved segmentRequestTimeout into retryParameters to fix the warning
-        'segmentRequestTimeout': 8000, 
-      },
-      // segmentPrefetchLimit was originally outside retryParameters, keeping it here.
-      'segmentPrefetchLimit': 2 
+      }
     };
 
     const manifestConfig = {
@@ -172,7 +173,7 @@
         'language', 
         'volume', 
         'mute', 
-        'picture_in_picture', // FIX: Changed 'pip' to 'picture_in_picture' to resolve the TypeError/Warning
+        'picture_in_picture', 
         'fullscreen'
       ],
       'volumeBarColors': {
@@ -218,7 +219,7 @@
 
       const videoContainer = document.querySelector('.shaka-video-container');
       const ui = new shaka.ui.Overlay(player, videoContainer, video);
-      ui.configure(uiConfig); // UI configuration uses the fixed settings
+      ui.configure(uiConfig); 
 
       // 4. Player Configuration
       player.configure({
